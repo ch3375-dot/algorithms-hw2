@@ -15,10 +15,12 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src import shortener
+from src.hash_table import ChainedHashTable
 from src.linear_probing import LinearProbingHashTable
 
 
 DEFAULT_PORT = 8000
+DEFAULT_CAPACITY = 97
 HOST = "0.0.0.0"
 RESERVED_PATHS = ("table", "shorten")
 
@@ -232,21 +234,6 @@ class ShortenerRequestHandler(BaseHTTPRequestHandler):
             return None
         return urls[0]
 
-    @staticmethod
-    def _table_markup(title: str, table: shortener.ChainedHashTable) -> str:
-        parts = [f"<h3>{escape(title)}</h3><ol>"]
-        for index, chain in enumerate(table.buckets):
-            pairs = " → ".join(
-                f"{escape(str(key))}: {escape(str(value))}"
-                for key, value in chain
-            )
-            parts.append(
-                f"<li><strong>{index}</strong>: "
-                f"<code>{pairs if pairs else '(빈 버킷)'}</code></li>"
-            )
-        parts.append("</ol>")
-        return "".join(parts)
-
     @classmethod
     def _comparison_markup(
         cls,
@@ -255,9 +242,17 @@ class ShortenerRequestHandler(BaseHTTPRequestHandler):
     ) -> str:
         parts = [
             f"<section><h2>{escape(title)}</h2>"
-            "<h3>개별 체이닝</h3>",
-            cls._table_markup("버킷 체인", chained_table),
+            f"<p>버킷 수: capacity {chained_table.capacity}</p>"
+            '<div class="table-method"><h3>개별 체이닝</h3><ol>'
         ]
+        for index, chain in enumerate(chained_table.buckets):
+            parts.append(
+                f"<li><strong>칸 {index}</strong>: "
+                f"{cls._chain_entries(chain, index, chained_table.capacity)}"
+                "</li>"
+            )
+        parts.append("</ol></div>")
+
         linear_table = LinearProbingHashTable(chained_table.capacity)
         keys_inserted = 0
         insertion_failed = False
@@ -273,12 +268,12 @@ class ShortenerRequestHandler(BaseHTTPRequestHandler):
                 break
 
         parts.append(
-            "<h3>선형 탐지</h3>"
+            '<div class="table-method"><h3>선형 탐지</h3>'
             f"<p>같은 키-값 쌍 {keys_inserted}개를 삽입했습니다.</p><ol>"
         )
         for index, entry in enumerate(linear_table.buckets):
             if entry is None:
-                description = "(빈 칸)"
+                parts.append(f"<li><strong>칸 {index}</strong>: (빈 칸)</li>")
             elif isinstance(entry, tuple):
                 key, value = entry
                 home = linear_table._bucket_index(key)
@@ -287,18 +282,23 @@ class ShortenerRequestHandler(BaseHTTPRequestHandler):
                     str((home + offset) % linear_table.capacity)
                     for offset in range(displacement + 1)
                 )
-                description = (
-                    f"{escape(str(key))}: {escape(str(value))} "
-                    f"(홈 칸 {home}, 이동 거리 {displacement}, "
-                    f"경로 {path})"
+                parts.append(
+                    cls._entry_markup(
+                        key,
+                        value,
+                        linear_table.capacity,
+                        home,
+                        collision=displacement > 0,
+                        location=index,
+                        probe_path=path,
+                        displacement=displacement,
+                    )
                 )
             else:
-                description = "(삭제 표시)"
-            parts.append(
-                f"<li><strong>{index}</strong>: "
-                f"<code>{description}</code></li>"
-            )
-        parts.append("</ol>")
+                parts.append(
+                    f"<li><strong>칸 {index}</strong>: (삭제 표시)</li>"
+                )
+        parts.append("</ol></div>")
         if insertion_failed:
             parts.append(
                 "<p>선형 탐지 테이블이 가득 차 나머지 키를 삽입하지 못했습니다.</p>"
@@ -306,11 +306,65 @@ class ShortenerRequestHandler(BaseHTTPRequestHandler):
         parts.append("</section>")
         return "".join(parts)
 
+    @classmethod
+    def _chain_entries(
+        cls,
+        chain: list[tuple[str, object]],
+        bucket_index: int,
+        capacity: int,
+    ) -> str:
+        if not chain:
+            return "<code>(빈 버킷)</code>"
+        entries = [
+            cls._entry_markup(
+                key,
+                value,
+                capacity,
+                bucket_index,
+                collision=len(chain) > 1,
+                location=bucket_index,
+            )
+            for key, value in chain
+        ]
+        return "<ul>" + "".join(entries) + "</ul>"
+
+    @classmethod
+    def _entry_markup(
+        cls,
+        key: str,
+        value: object,
+        capacity: int,
+        home: int,
+        *,
+        collision: bool,
+        location: int,
+        probe_path: str | None = None,
+        displacement: int | None = None,
+    ) -> str:
+        key_text = escape(str(key))
+        value_text = escape(str(value))
+        collision_class = ' class="collision"' if collision else ""
+        collision_badge = (
+            '<strong class="collision-badge">충돌</strong> '
+            if collision
+            else ""
+        )
+        details = cls._hash_steps(key, capacity)
+        position = f"홈 칸 {home}, 실제 칸 {location}"
+        if displacement is not None:
+            position += f", 이동 거리 {displacement}, 탐색 경로 {probe_path}"
+        return (
+            f"<li{collision_class}>{collision_badge}"
+            f"<code>{key_text}: {value_text}</code> "
+            f"<span>({position})</span>{details}</li>"
+        )
+
     @staticmethod
     def _hash_steps(key: str, capacity: int) -> str:
         value = 0
         parts = [
-            f"<h2>호너 해시 계산: <code>{escape(key)}</code></h2>",
+            '<details><summary>호너 해시 계산 과정</summary>',
+            f"<p>키: <code>{escape(key)}</code></p>",
             f"<p>UTF-8 바이트: {key.encode('utf-8').hex(' ')}</p>",
             "<ol>",
             "<li>초기값: h = 0</li>",
@@ -325,7 +379,8 @@ class ShortenerRequestHandler(BaseHTTPRequestHandler):
         parts.extend(
             (
                 "</ol>",
-                f"<p>버킷 인덱스: {value}</p>",
+                f"<p>최종 칸: {value}</p>",
+                "</details>",
             )
         )
         return "".join(parts)
@@ -335,6 +390,9 @@ class ShortenerRequestHandler(BaseHTTPRequestHandler):
         parts = [
             "<!doctype html><html><head><meta charset=\"utf-8\">"
             "<title>해시 테이블</title></head><body>"
+            "<style>.collision{background:#fff0c2;border-left:4px solid "
+            "#d97706;padding:.4em}.collision-badge{color:#92400e}"
+            ".table-method{margin:1em 0}</style>"
             "<h1>해시 테이블 상태 비교</h1>",
             cls._comparison_markup("URL → 코드", shortener._URL_TO_CODE),
             cls._comparison_markup("코드 → URL", shortener._CODE_TO_URL),
@@ -356,8 +414,15 @@ class ShortenerRequestHandler(BaseHTTPRequestHandler):
         parts.append("</body></html>")
         return "".join(parts)
 
+    @staticmethod
+    def _configure_capacity(capacity: int) -> None:
+        shortener._URL_TO_CODE = ChainedHashTable(capacity)
+        shortener._CODE_TO_URL = ChainedHashTable(capacity)
+        shortener._NEXT_ID = 0
 
-def serve(port: int = DEFAULT_PORT) -> None:
+
+def serve(port: int = DEFAULT_PORT, capacity: int = DEFAULT_CAPACITY) -> None:
+    ShortenerRequestHandler._configure_capacity(capacity)
     server = HTTPServer((HOST, port), ShortenerRequestHandler)
     try:
         server.serve_forever()
@@ -367,11 +432,18 @@ def serve(port: int = DEFAULT_PORT) -> None:
         server.server_close()
 
 
-def main() -> None:
+def _argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run the URL shortener server.")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
-    arguments = parser.parse_args()
-    serve(arguments.port)
+    parser.add_argument("--capacity", type=int, default=DEFAULT_CAPACITY)
+    return parser
+
+
+def main() -> None:
+    arguments = _argument_parser().parse_args()
+    if arguments.capacity <= 0:
+        raise SystemExit("--capacity must be greater than zero")
+    serve(arguments.port, arguments.capacity)
 
 
 if __name__ == "__main__":
