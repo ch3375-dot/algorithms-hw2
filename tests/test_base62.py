@@ -26,11 +26,17 @@ class Base62Tests(unittest.TestCase):
         value = 2**128 + 987654321
         self.assertEqual(decode(encode(value)), value)
 
+    def test_decode_accepts_leading_zeroes(self):
+        self.assertEqual(decode("00"), 0)
+        self.assertEqual(decode("00010"), 62)
+
     def test_encode_rejects_negative_and_non_integer_values(self):
         with self.assertRaises(ValueError):
             encode(-1)
         with self.assertRaises(TypeError):
             encode(1.5)
+        with self.assertRaises(TypeError):
+            encode(True)
 
     def test_decode_rejects_empty_or_invalid_values(self):
         with self.assertRaises(ValueError):
