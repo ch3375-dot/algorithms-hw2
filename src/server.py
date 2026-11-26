@@ -64,6 +64,34 @@ class ShortenerRequestHandler(BaseHTTPRequestHandler):
             return None
         return self.rfile.read(length)
 
+    def _request_origin(self) -> str | None:
+        host = self.headers.get("Host")
+        if not host or any(character.isspace() for character in host):
+            return None
+        try:
+            parsed_host = urlsplit(f"//{host}")
+            if (
+                not parsed_host.hostname
+                or parsed_host.username is not None
+                or parsed_host.password is not None
+                or parsed_host.path
+                or parsed_host.query
+                or parsed_host.fragment
+            ):
+                return None
+            parsed_host.port
+        except ValueError:
+            return None
+
+        forwarded_proto = (
+            self.headers.get("X-Forwarded-Proto", "")
+            .split(",", 1)[0]
+            .strip()
+            .lower()
+        )
+        scheme = "https" if forwarded_proto == "https" else "http"
+        return f"{scheme}://{host}"
+
     def do_GET(self) -> None:
         request = urlsplit(self.path)
         if request.path == "/":
@@ -128,6 +156,12 @@ class ShortenerRequestHandler(BaseHTTPRequestHandler):
         if url is None:
             self._send_error_text(400, "Invalid request body")
             return
+        origin = None
+        if content_type == "application/x-www-form-urlencoded":
+            origin = self._request_origin()
+            if origin is None:
+                self._send_error_text(400, "Invalid Host header")
+                return
         try:
             code = shortener.shorten(url)
         except ValueError:
@@ -149,12 +183,18 @@ class ShortenerRequestHandler(BaseHTTPRequestHandler):
             )
             return
 
+        short_url = f"{origin}/{code}"
         self._send_html(
             201,
             "<!doctype html><html><head><meta charset=\"utf-8\">"
             "<title>단축 URL</title></head><body>"
             "<h1>단축 URL</h1>"
             f"<p>코드: <code>{escape(code)}</code></p>"
+            f'<p>단축 URL: <a href="{escape(short_url, quote=True)}">'
+            f"{escape(short_url)}</a></p>"
+            '<label for="short-url">복사할 단축 URL</label>'
+            f'<input id="short-url" type="text" readonly '
+            f'value="{escape(short_url, quote=True)}">'
             f'<p>원본 URL: <a href="{escape(url, quote=True)}">'
             f"{escape(url)}</a></p>"
             '<p><a href="/">다른 URL 단축하기</a></p>'
