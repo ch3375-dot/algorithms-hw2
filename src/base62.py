@@ -1,7 +1,6 @@
 """Base62 encoding using digits, uppercase letters, then lowercase letters."""
 
 ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-_VALUES = {character: value for value, character in enumerate(ALPHABET)}
 
 
 def encode(n: int) -> str:
@@ -29,9 +28,8 @@ def decode(s: str) -> int:
 
     value = 0
     for character in s:
-        try:
-            digit = _VALUES[character]
-        except KeyError:
+        digit = ALPHABET.find(character)
+        if digit == -1:
             raise ValueError(f"invalid base62 character: {character!r}") from None
         value = value * len(ALPHABET) + digit
     return value
