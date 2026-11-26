@@ -65,7 +65,11 @@ class ShortenerRequestHandler(BaseHTTPRequestHandler):
         return self.rfile.read(length)
 
     def _request_origin(self) -> str | None:
-        host = self.headers.get("Host")
+        forwarded_host = self.headers.get("X-Forwarded-Host")
+        if forwarded_host is None:
+            host = self.headers.get("Host")
+        else:
+            host = forwarded_host.split(",", 1)[0].strip()
         if not host or any(character.isspace() for character in host):
             return None
         try:
