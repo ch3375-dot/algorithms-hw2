@@ -15,6 +15,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src import shortener
+from src.linear_probing import LinearProbingHashTable
 
 
 DEFAULT_PORT = 8000
@@ -233,7 +234,7 @@ class ShortenerRequestHandler(BaseHTTPRequestHandler):
 
     @staticmethod
     def _table_markup(title: str, table: shortener.ChainedHashTable) -> str:
-        parts = [f"<h2>{escape(title)}</h2><ol>"]
+        parts = [f"<h3>{escape(title)}</h3><ol>"]
         for index, chain in enumerate(table.buckets):
             pairs = " → ".join(
                 f"{escape(str(key))}: {escape(str(value))}"
@@ -244,6 +245,65 @@ class ShortenerRequestHandler(BaseHTTPRequestHandler):
                 f"<code>{pairs if pairs else '(빈 버킷)'}</code></li>"
             )
         parts.append("</ol>")
+        return "".join(parts)
+
+    @classmethod
+    def _comparison_markup(
+        cls,
+        title: str,
+        chained_table: shortener.ChainedHashTable,
+    ) -> str:
+        parts = [
+            f"<section><h2>{escape(title)}</h2>"
+            "<h3>개별 체이닝</h3>",
+            cls._table_markup("버킷 체인", chained_table),
+        ]
+        linear_table = LinearProbingHashTable(chained_table.capacity)
+        keys_inserted = 0
+        insertion_failed = False
+        for chain in chained_table.buckets:
+            for key, value in chain:
+                try:
+                    linear_table.put(key, value)
+                except OverflowError:
+                    insertion_failed = True
+                    break
+                keys_inserted += 1
+            if insertion_failed:
+                break
+
+        parts.append(
+            "<h3>선형 탐지</h3>"
+            f"<p>같은 키-값 쌍 {keys_inserted}개를 삽입했습니다.</p><ol>"
+        )
+        for index, entry in enumerate(linear_table.buckets):
+            if entry is None:
+                description = "(빈 칸)"
+            elif isinstance(entry, tuple):
+                key, value = entry
+                home = linear_table._bucket_index(key)
+                displacement = (index - home) % linear_table.capacity
+                path = " → ".join(
+                    str((home + offset) % linear_table.capacity)
+                    for offset in range(displacement + 1)
+                )
+                description = (
+                    f"{escape(str(key))}: {escape(str(value))} "
+                    f"(홈 칸 {home}, 이동 거리 {displacement}, "
+                    f"경로 {path})"
+                )
+            else:
+                description = "(삭제 표시)"
+            parts.append(
+                f"<li><strong>{index}</strong>: "
+                f"<code>{description}</code></li>"
+            )
+        parts.append("</ol>")
+        if insertion_failed:
+            parts.append(
+                "<p>선형 탐지 테이블이 가득 차 나머지 키를 삽입하지 못했습니다.</p>"
+            )
+        parts.append("</section>")
         return "".join(parts)
 
     @staticmethod
@@ -275,9 +335,9 @@ class ShortenerRequestHandler(BaseHTTPRequestHandler):
         parts = [
             "<!doctype html><html><head><meta charset=\"utf-8\">"
             "<title>해시 테이블</title></head><body>"
-            "<h1>해시 테이블 버킷</h1>",
-            cls._table_markup("URL → 코드", shortener._URL_TO_CODE),
-            cls._table_markup("코드 → URL", shortener._CODE_TO_URL),
+            "<h1>해시 테이블 상태 비교</h1>",
+            cls._comparison_markup("URL → 코드", shortener._URL_TO_CODE),
+            cls._comparison_markup("코드 → URL", shortener._CODE_TO_URL),
         ]
         query_key = None
         has_key = False
