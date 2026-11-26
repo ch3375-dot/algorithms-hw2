@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="560" viewBox="0 0 1000 560">
+<title>개별 체이닝 탐색 비교</title>
+<rect width="100%" height="100%" fill="white"/>
+<text x="500" y="30" text-anchor="middle" font-size="20">적재율별 평균 노드 비교</text>
+<line x1="90" y1="425.0" x2="950" y2="425.0" stroke="#d1d5db" stroke-width="1"/>
+<text x="78" y="430.0" text-anchor="end" font-size="12">0.0</text>
+<line x1="90" y1="352.0" x2="950" y2="352.0" stroke="#d1d5db" stroke-width="1"/>
+<text x="78" y="357.0" text-anchor="end" font-size="12">1.0</text>
+<line x1="90" y1="279.0" x2="950" y2="279.0" stroke="#d1d5db" stroke-width="1"/>
+<text x="78" y="284.0" text-anchor="end" font-size="12">2.0</text>
+<line x1="90" y1="206.0" x2="950" y2="206.0" stroke="#d1d5db" stroke-width="1"/>
+<text x="78" y="211.0" text-anchor="end" font-size="12">3.0</text>
+<line x1="90" y1="133.0" x2="950" y2="133.0" stroke="#d1d5db" stroke-width="1"/>
+<text x="78" y="138.0" text-anchor="end" font-size="12">4.0</text>
+<line x1="90" y1="60.0" x2="950" y2="60.0" stroke="#d1d5db" stroke-width="1"/>
+<text x="78" y="65.0" text-anchor="end" font-size="12">5.0</text>
+<line x1="90" y1="60" x2="90" y2="425" stroke="#111827"/>
+<line x1="90" y1="425" x2="950" y2="425" stroke="#111827"/>
+<text x="520.0" y="465" text-anchor="middle" font-size="14">목표 적재율 α</text>
+<text x="22" y="242.5" transform="rotate(-90 22 242)" text-anchor="middle" font-size="14">평균 방문 노드 수</text>
+<text x="90.0" y="449" text-anchor="middle" font-size="12">α=0.25</text>
+<text x="305.0" y="449" text-anchor="middle" font-size="12">α=0.5</text>
+<text x="520.0" y="449" text-anchor="middle" font-size="12">α=1</text>
+<text x="735.0" y="449" text-anchor="middle" font-size="12">α=2</text>
+<text x="950.0" y="449" text-anchor="middle" font-size="12">α=4</text>
+<polyline points="90.0,345.9 305.0,329.7 520.0,314.4 735.0,277.5 950.0,198.1" fill="none" stroke="#2563eb" stroke-width="2.5"/>
+<circle cx="90.0" cy="345.9" r="4" fill="#2563eb"/>
+<circle cx="305.0" cy="329.7" r="4" fill="#2563eb"/>
+<circle cx="520.0" cy="314.4" r="4" fill="#2563eb"/>
+<circle cx="735.0" cy="277.5" r="4" fill="#2563eb"/>
+<circle cx="950.0" cy="198.1" r="4" fill="#2563eb"/>
+<line x1="110" y1="510" x2="138" y2="510" stroke="#2563eb" stroke-width="2.5"/>
+<text x="144" y="515" font-size="12">성공 실측</text>
+<polyline points="90.0,342.9 305.0,333.8 520.0,315.5 735.0,279.0 950.0,206.0" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-dasharray="8 5"/>
+<circle cx="90.0" cy="342.9" r="4" fill="#2563eb"/>
+<circle cx="305.0" cy="333.8" r="4" fill="#2563eb"/>
+<circle cx="520.0" cy="315.5" r="4" fill="#2563eb"/>
+<circle cx="735.0" cy="279.0" r="4" fill="#2563eb"/>
+<circle cx="950.0" cy="206.0" r="4" fill="#2563eb"/>
+<line x1="340" y1="510" x2="368" y2="510" stroke="#2563eb" stroke-width="2.5" stroke-dasharray="8 5"/>
+<text x="374" y="515" font-size="12">성공 이론 (1 + α/2)</text>
+<polyline points="90.0,406.8 305.0,387.4 520.0,351.2 735.0,279.3 950.0,132.6" fill="none" stroke="#dc2626" stroke-width="2.5"/>
+<circle cx="90.0" cy="406.8" r="4" fill="#dc2626"/>
+<circle cx="305.0" cy="387.4" r="4" fill="#dc2626"/>
+<circle cx="520.0" cy="351.2" r="4" fill="#dc2626"/>
+<circle cx="735.0" cy="279.3" r="4" fill="#dc2626"/>
+<circle cx="950.0" cy="132.6" r="4" fill="#dc2626"/>
+<line x1="590" y1="510" x2="618" y2="510" stroke="#dc2626" stroke-width="2.5"/>
+<text x="624" y="515" font-size="12">실패 실측</text>
+<polyline points="90.0,406.8 305.0,388.5 520.0,352.0 735.0,279.0 950.0,133.0" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="8 5"/>
+<circle cx="90.0" cy="406.8" r="4" fill="#dc2626"/>
+<circle cx="305.0" cy="388.5" r="4" fill="#dc2626"/>
+<circle cx="520.0" cy="352.0" r="4" fill="#dc2626"/>
+<circle cx="735.0" cy="279.0" r="4" fill="#dc2626"/>
+<circle cx="950.0" cy="133.0" r="4" fill="#dc2626"/>
+<line x1="790" y1="510" x2="818" y2="510" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="8 5"/>
+<text x="824" y="515" font-size="12">실패 이론 (α)</text>
+</svg>
